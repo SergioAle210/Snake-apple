@@ -207,7 +207,7 @@ fn display_game_over_screen(framebuffer: &mut Framebuffer) {
     }
 
     framebuffer.draw_text(
-        "Perdiste, presiona la tecla de enter o espacio para continuar",
+        "Press Enter or Space to Start a New Game",
         width / 2 - 150,
         height - 50,
         Color::from_hex(0xFFFFFF),
@@ -261,16 +261,12 @@ fn display_scores(framebuffer: &mut Framebuffer, current_score: u32, high_score:
     let high_score_text = format!("High Score: {}", high_score);
 
     // Draw current score in the top left corner
-    framebuffer.draw_text(&score_text, 10, 10, Color::new(255, 255, 255)); // White color
+    framebuffer.draw_text(&score_text, 10, 10, Color::new(0, 0, 0)); // White color
 
     // Draw high score in the top right corner
-    let high_score_x = framebuffer.width - 200; // Adjust based on text width
-    framebuffer.draw_text(
-        &high_score_text,
-        high_score_x,
-        10,
-        Color::new(255, 255, 255),
-    ); // White color
+    let high_score_x = framebuffer.width - 250; // Adjust based on text width
+    framebuffer.draw_text(&high_score_text, high_score_x, 10, Color::new(0, 0, 0));
+    // White color
 }
 
 fn spawn_apple(snake: &Snake, width: usize, height: usize) -> (usize, usize) {
