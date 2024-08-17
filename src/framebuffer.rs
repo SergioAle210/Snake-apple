@@ -10,13 +10,13 @@ pub struct Framebuffer {
 
 impl Framebuffer {
     pub fn new(width: usize, height: usize) -> Self {
-        let buffer = vec![Color::new(0, 0, 0); width * height];
+        let buffer = vec![Color::new(0, 0, 0); width * height]; // Black background
         Self {
             buffer,
             width,
             height,
-            background_color: Color::new(0, 0, 0),
-            current_color: Color::new(255, 255, 255),
+            background_color: Color::new(0, 0, 0), // Black background
+            current_color: Color::new(255, 255, 255), // Default drawing color is white
         }
     }
 
@@ -51,13 +51,13 @@ impl Framebuffer {
 
     pub fn clear(&mut self) {
         for pixel in &mut self.buffer {
-            *pixel = self.background_color.clone();
+            *pixel = self.background_color.clone(); // Clear to background color
         }
     }
 
     pub fn is_point_set(&self, x: usize, y: usize) -> bool {
         if x < self.width && y < self.height {
-            self.buffer[y * self.width + x] == Color::from_hex(0xFFFFFF)
+            self.buffer[y * self.width + x] == self.current_color
         } else {
             false
         }
