@@ -225,12 +225,20 @@ fn draw_border_and_grid(
 }
 
 fn display_scores(framebuffer: &mut Framebuffer, current_score: u32, high_score: u32) {
-    // Placeholder function to display scores on the screen
-    // Implement the actual text drawing using your framebuffer or any text drawing method
-    println!(
-        "Current Score: {} | High Score: {}",
-        current_score, high_score
-    );
+    let score_text = format!("Score: {}", current_score);
+    let high_score_text = format!("High Score: {}", high_score);
+
+    // Draw current score in the top left corner
+    framebuffer.draw_text(&score_text, 10, 10, Color::new(255, 255, 255)); // White color
+
+    // Draw high score in the top right corner
+    let high_score_x = framebuffer.width - 200; // Adjust based on text width
+    framebuffer.draw_text(
+        &high_score_text,
+        high_score_x,
+        10,
+        Color::new(255, 255, 255),
+    ); // White color
 }
 
 fn spawn_apple(snake: &Snake, width: usize, height: usize) -> (usize, usize) {
