@@ -91,8 +91,8 @@ fn main() {
         let mut game_over = false;
 
         while window.is_open() && !game_over {
-            if window.is_key_down(Key::Escape) {
-                return; // Exit the game
+            if window.is_key_down(Key::Escape) || !window.is_open() {
+                return; // Exit the game if Escape is pressed or the window is closed
             }
 
             if last_update.elapsed() >= update_interval {
@@ -179,8 +179,8 @@ fn main() {
 
             // Wait for user input to restart
             while window.is_open() {
-                if window.is_key_down(Key::Escape) {
-                    return; // Exit the game
+                if window.is_key_down(Key::Escape) || !window.is_open() {
+                    return; // Exit the game if Escape is pressed or the window is closed
                 }
                 if window.is_key_down(Key::Enter) || window.is_key_down(Key::Space) {
                     break; // Restart the game
