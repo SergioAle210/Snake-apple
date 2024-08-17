@@ -1,10 +1,12 @@
 mod color;
 mod framebuffer;
 mod snake;
+mod texture;
 
 use color::Color;
 use framebuffer::Framebuffer;
 use minifb::{Key, Window, WindowOptions};
+use once_cell::sync::Lazy;
 use rand::Rng;
 use rodio::{source::Source, Decoder, OutputStream, Sink};
 use snake::{Direction, Snake};
@@ -13,16 +15,19 @@ use std::io::{BufReader, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+use texture::Texture;
 
 const HIGH_SCORE_FILE: &str = "high_score.txt";
+static GAMEOVER: Lazy<Arc<Texture>> =
+    Lazy::new(|| Arc::new(Texture::new("./assets/game-over.jpg")));
 
-fn play_background_music(sink: Arc<Mutex<Sink>>, stream_handle: rodio::OutputStreamHandle) {
+fn play_background_music(sink: Arc<Mutex<Sink>>) {
     let file = File::open("./assets/study.mp3").expect("Failed to open music file");
     let source = Decoder::new(BufReader::new(file)).expect("Failed to decode audio");
 
     let amplified_source = source.amplify(0.3);
 
-    let mut sink = sink.lock().unwrap();
+    let sink = sink.lock().unwrap();
     sink.append(amplified_source.repeat_infinite());
     sink.play();
 }
@@ -48,9 +53,8 @@ fn main() {
 
     // Start playing background music in a separate thread.
     let bg_music_sink_clone = Arc::clone(&bg_music_sink);
-    let stream_handle_clone = stream_handle.clone();
     thread::spawn(move || {
-        play_background_music(bg_music_sink_clone, stream_handle_clone);
+        play_background_music(bg_music_sink_clone);
     });
 
     let width = 1300;
@@ -167,6 +171,13 @@ fn main() {
                 save_high_score(high_score);
             }
 
+            // Display the Game Over screen
+            display_game_over_screen(&mut framebuffer);
+            window
+                .update_with_buffer(&framebuffer.to_u32_buffer(), width, height)
+                .unwrap();
+
+            // Wait for user input to restart
             while window.is_open() {
                 if window.is_key_down(Key::Escape) {
                     return; // Exit the game
@@ -180,6 +191,27 @@ fn main() {
             current_score = 0; // Reset the current score for the new game
         }
     }
+}
+
+fn display_game_over_screen(framebuffer: &mut Framebuffer) {
+    let width = framebuffer.width;
+    let height = framebuffer.height;
+
+    for y in 0..height {
+        for x in 0..width {
+            let tx = x * GAMEOVER.width as usize / width;
+            let ty = y * GAMEOVER.height as usize / height;
+            let color = GAMEOVER.get_pixel(tx, ty);
+            framebuffer.point_with_color(x, y, color);
+        }
+    }
+
+    framebuffer.draw_text(
+        "Perdiste, presiona la tecla de enter o espacio para continuar",
+        width / 2 - 150,
+        height - 50,
+        Color::from_hex(0xFFFFFF),
+    );
 }
 
 fn draw_border_and_grid(
