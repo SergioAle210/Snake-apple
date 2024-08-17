@@ -6,10 +6,38 @@ use color::Color;
 use framebuffer::Framebuffer;
 use minifb::{Key, Window, WindowOptions};
 use rand::Rng;
+use rodio::{source::Source, Decoder, OutputStream, Sink};
 use snake::{Direction, Snake};
-use std::time::{Duration, Instant};
+use std::fs::File;
+use std::thread;
+use std::{
+    io::BufReader,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
+
+fn play_background_music(sink: Arc<Mutex<Sink>>, stream_handle: rodio::OutputStreamHandle) {
+    let file = File::open("./assets/study.mp3").expect("Failed to open music file");
+    let source = Decoder::new(BufReader::new(file)).expect("Failed to decode audio");
+
+    let amplified_source = source.amplify(0.3);
+
+    let sink = sink.lock().unwrap();
+    sink.append(amplified_source.repeat_infinite());
+    sink.play();
+}
 
 fn main() {
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    let bg_music_sink = Arc::new(Mutex::new(Sink::try_new(&stream_handle).unwrap()));
+
+    // Start playing background music in a separate thread.
+    let bg_music_sink_clone = Arc::clone(&bg_music_sink);
+    let stream_handle_clone = stream_handle.clone();
+    thread::spawn(move || {
+        play_background_music(bg_music_sink_clone, stream_handle_clone);
+    });
+
     let width = 1300;
     let height = 900;
     let grid_size = 40; // Size of each grid cell
