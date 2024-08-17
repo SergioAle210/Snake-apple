@@ -76,4 +76,8 @@ impl Snake {
             );
         }
     }
+
+    pub fn direction(&self) -> Direction {
+        self.direction
+    }
 }

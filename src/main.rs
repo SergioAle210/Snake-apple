@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 fn main() {
     let width = 1300;
     let height = 900;
-    let grid_size = 20; // Size of each grid cell
+    let grid_size = 40; // Size of each grid cell
     let mut framebuffer = Framebuffer::new(width, height);
 
     framebuffer.set_background_color(Color::new(0, 0, 0)); // Set to black
@@ -44,14 +44,14 @@ fn main() {
             // Draw the border and grid pattern
             draw_border_and_grid(&mut framebuffer, width, height, grid_size);
 
-            // Handle input
-            if window.is_key_down(Key::Up) {
+            // Handle input with direction validation
+            if window.is_key_down(Key::Up) && snake.direction() != Direction::Down {
                 snake.set_direction(Direction::Up);
-            } else if window.is_key_down(Key::Down) {
+            } else if window.is_key_down(Key::Down) && snake.direction() != Direction::Up {
                 snake.set_direction(Direction::Down);
-            } else if window.is_key_down(Key::Left) {
+            } else if window.is_key_down(Key::Left) && snake.direction() != Direction::Right {
                 snake.set_direction(Direction::Left);
-            } else if window.is_key_down(Key::Right) {
+            } else if window.is_key_down(Key::Right) && snake.direction() != Direction::Left {
                 snake.set_direction(Direction::Right);
             }
 
@@ -60,8 +60,10 @@ fn main() {
 
             // Check for collisions
             let (head_x, head_y) = snake.head_position();
-            if head_x >= width / grid_size
-                || head_y >= height / grid_size
+            if head_x == 0
+                || head_x == width / grid_size - 1
+                || head_y == 0
+                || head_y == height / grid_size - 1
                 || snake.check_collision()
             {
                 println!("Game Over!");
@@ -80,7 +82,7 @@ fn main() {
                 apple.1 * grid_size,
                 grid_size,
                 grid_size,
-                Color::new(255, 0, 0),
+                Color::new(129, 45, 214), // Grape color
             );
 
             // Draw the snake
@@ -105,8 +107,8 @@ fn draw_border_and_grid(
     grid_size: usize,
 ) {
     let border_color = Color::new(144, 12, 63);
-    let color1 = Color::new(255, 195, 0);
-    let color2 = Color::new(255, 87, 51);
+    let color1 = Color::new(230, 176, 170);
+    let color2 = Color::new(215, 189, 226);
 
     // Draw the border
     for x in 0..width / grid_size {
