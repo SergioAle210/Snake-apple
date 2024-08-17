@@ -1,7 +1,6 @@
 extern crate image;
 
 use crate::color::Color;
-use image::{DynamicImage, GenericImageView};
 use image::{ImageReader, RgbImage};
 
 pub struct Texture {

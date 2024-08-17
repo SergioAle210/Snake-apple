@@ -6,7 +6,6 @@ pub struct Framebuffer {
     pub height: usize,
     pub buffer: Vec<Color>,
     pub background_color: Color,
-    pub current_color: Color,
 }
 
 impl Framebuffer {
@@ -17,7 +16,6 @@ impl Framebuffer {
             width,
             height,
             background_color: Color::new(0, 0, 0), // Black background
-            current_color: Color::new(255, 255, 255), // Default drawing color is white
         }
     }
 
@@ -29,10 +27,6 @@ impl Framebuffer {
 
     pub fn set_background_color(&mut self, color: impl Into<Color>) {
         self.background_color = color.into();
-    }
-
-    pub fn set_current_color(&mut self, color: u32) {
-        self.current_color = Color::from_hex(color);
     }
 
     pub fn draw_rectangle(
@@ -53,14 +47,6 @@ impl Framebuffer {
     pub fn clear(&mut self) {
         for pixel in &mut self.buffer {
             *pixel = self.background_color.clone(); // Clear to background color
-        }
-    }
-
-    pub fn is_point_set(&self, x: usize, y: usize) -> bool {
-        if x < self.width && y < self.height {
-            self.buffer[y * self.width + x] == self.current_color
-        } else {
-            false
         }
     }
 
