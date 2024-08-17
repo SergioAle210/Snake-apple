@@ -41,6 +41,9 @@ fn main() {
         if last_update.elapsed() >= update_interval {
             framebuffer.clear(); // Clear to background color
 
+            // Draw the border and grid pattern
+            draw_border_and_grid(&mut framebuffer, width, height, grid_size);
+
             // Handle input
             if window.is_key_down(Key::Up) {
                 snake.set_direction(Direction::Up);
@@ -95,11 +98,53 @@ fn main() {
     }
 }
 
+fn draw_border_and_grid(
+    framebuffer: &mut Framebuffer,
+    width: usize,
+    height: usize,
+    grid_size: usize,
+) {
+    let border_color = Color::new(144, 12, 63);
+    let color1 = Color::new(255, 195, 0);
+    let color2 = Color::new(255, 87, 51);
+
+    // Draw the border
+    for x in 0..width / grid_size {
+        framebuffer.draw_rectangle(x * grid_size, 0, grid_size, grid_size, border_color);
+        framebuffer.draw_rectangle(
+            x * grid_size,
+            (height / grid_size - 1) * grid_size,
+            grid_size,
+            grid_size,
+            border_color,
+        );
+    }
+
+    for y in 0..height / grid_size {
+        framebuffer.draw_rectangle(0, y * grid_size, grid_size, grid_size, border_color);
+        framebuffer.draw_rectangle(
+            (width / grid_size - 1) * grid_size,
+            y * grid_size,
+            grid_size,
+            grid_size,
+            border_color,
+        );
+    }
+
+    // Draw the grid pattern inside the border
+    for y in 1..height / grid_size - 1 {
+        for x in 1..width / grid_size - 1 {
+            let color = if (x + y) % 2 == 0 { color1 } else { color2 };
+            framebuffer.draw_rectangle(x * grid_size, y * grid_size, grid_size, grid_size, color);
+        }
+    }
+}
+
 fn spawn_apple(snake: &Snake, width: usize, height: usize) -> (usize, usize) {
     let mut rng = rand::thread_rng();
     loop {
-        let x = rng.gen_range(0..width);
-        let y = rng.gen_range(0..height);
+        let x = rng.gen_range(1..width - 1); // Avoid spawning on the border
+        let y = rng.gen_range(1..height - 1); // Avoid spawning on the border
         if !snake.body.contains(&(x, y)) {
             return (x, y);
         }
