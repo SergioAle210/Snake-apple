@@ -8,13 +8,13 @@ use minifb::{Key, Window, WindowOptions};
 use rand::Rng;
 use rodio::{source::Source, Decoder, OutputStream, Sink};
 use snake::{Direction, Snake};
-use std::fs::File;
+use std::fs::{self, File};
+use std::io::{BufReader, Write};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::{
-    io::BufReader,
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
+
+const HIGH_SCORE_FILE: &str = "high_score.txt";
 
 fn play_background_music(sink: Arc<Mutex<Sink>>, stream_handle: rodio::OutputStreamHandle) {
     let file = File::open("./assets/study.mp3").expect("Failed to open music file");
@@ -22,9 +22,24 @@ fn play_background_music(sink: Arc<Mutex<Sink>>, stream_handle: rodio::OutputStr
 
     let amplified_source = source.amplify(0.3);
 
-    let sink = sink.lock().unwrap();
+    let mut sink = sink.lock().unwrap();
     sink.append(amplified_source.repeat_infinite());
     sink.play();
+}
+
+fn load_high_score() -> u32 {
+    if let Ok(contents) = fs::read_to_string(HIGH_SCORE_FILE) {
+        if let Ok(score) = contents.trim().parse() {
+            return score;
+        }
+    }
+    0
+}
+
+fn save_high_score(score: u32) {
+    if let Ok(mut file) = File::create(HIGH_SCORE_FILE) {
+        let _ = writeln!(file, "{}", score);
+    }
 }
 
 fn main() {
@@ -55,76 +70,115 @@ fn main() {
         panic!("{}", e);
     });
 
-    let mut snake = Snake::new(
-        width / (2 * grid_size),
-        height / (2 * grid_size),
-        Color::new(44, 86, 176),
-    );
-    let mut apple = spawn_apple(&snake, width / grid_size, height / grid_size);
+    let mut high_score = load_high_score();
+    let mut current_score = 0;
 
-    let mut last_update = Instant::now();
-    let update_interval = Duration::from_millis(100);
+    loop {
+        let mut snake = Snake::new(
+            width / (2 * grid_size),
+            height / (2 * grid_size),
+            Color::new(44, 86, 176),
+        );
+        let mut apple = spawn_apple(&snake, width / grid_size, height / grid_size);
 
-    while window.is_open() && !window.is_key_down(Key::Escape) {
-        if last_update.elapsed() >= update_interval {
-            framebuffer.clear(); // Clear to background color
+        let mut last_update = Instant::now();
+        let update_interval = Duration::from_millis(100);
 
-            // Draw the border and grid pattern
-            draw_border_and_grid(&mut framebuffer, width, height, grid_size);
+        let mut game_over = false;
 
-            // Handle input with direction validation
-            if window.is_key_down(Key::Up) && snake.direction() != Direction::Down {
-                snake.set_direction(Direction::Up);
-            } else if window.is_key_down(Key::Down) && snake.direction() != Direction::Up {
-                snake.set_direction(Direction::Down);
-            } else if window.is_key_down(Key::Left) && snake.direction() != Direction::Right {
-                snake.set_direction(Direction::Left);
-            } else if window.is_key_down(Key::Right) && snake.direction() != Direction::Left {
-                snake.set_direction(Direction::Right);
+        while window.is_open() && !game_over {
+            if window.is_key_down(Key::Escape) {
+                return; // Exit the game
             }
 
-            // Move the snake
-            snake.move_forward();
+            if last_update.elapsed() >= update_interval {
+                framebuffer.clear(); // Clear to background color
 
-            // Check for collisions
-            let (head_x, head_y) = snake.head_position();
-            if head_x == 0
-                || head_x == width / grid_size - 1
-                || head_y == 0
-                || head_y == height / grid_size - 1
-                || snake.check_collision()
-            {
-                println!("Game Over!");
-                break;
+                // Draw the border and grid pattern
+                draw_border_and_grid(&mut framebuffer, width, height, grid_size);
+
+                // Handle input with direction validation
+                if window.is_key_down(Key::Up) && snake.direction() != Direction::Down {
+                    snake.set_direction(Direction::Up);
+                } else if window.is_key_down(Key::Down) && snake.direction() != Direction::Up {
+                    snake.set_direction(Direction::Down);
+                } else if window.is_key_down(Key::Left) && snake.direction() != Direction::Right {
+                    snake.set_direction(Direction::Left);
+                } else if window.is_key_down(Key::Right) && snake.direction() != Direction::Left {
+                    snake.set_direction(Direction::Right);
+                }
+
+                // Move the snake
+                snake.move_forward();
+
+                // Check for collisions
+                let (head_x, head_y) = snake.head_position();
+                if head_x == 0
+                    || head_x == width / grid_size - 1
+                    || head_y == 0
+                    || head_y == height / grid_size - 1
+                    || snake.check_collision()
+                {
+                    game_over = true;
+                    break;
+                }
+
+                // Check if the snake eats the apple
+                if snake.head_position() == apple {
+                    snake.grow();
+                    current_score += 1;
+                    if current_score > high_score {
+                        high_score = current_score;
+                        save_high_score(high_score);
+                    }
+                    apple = spawn_apple(&snake, width / grid_size, height / grid_size);
+                }
+
+                // Draw the apple
+                framebuffer.draw_rectangle(
+                    apple.0 * grid_size,
+                    apple.1 * grid_size,
+                    grid_size,
+                    grid_size,
+                    Color::new(129, 45, 214), // Grape color
+                );
+
+                // Draw the snake
+                snake.draw(&mut framebuffer, grid_size);
+
+                // Display the current score and high score
+                display_scores(&mut framebuffer, current_score, high_score);
+
+                // Update the window
+                window
+                    .update_with_buffer(&framebuffer.to_u32_buffer(), width, height)
+                    .unwrap();
+
+                last_update = Instant::now();
             }
 
-            // Check if the snake eats the apple
-            if snake.head_position() == apple {
-                snake.grow();
-                apple = spawn_apple(&snake, width / grid_size, height / grid_size);
-            }
-
-            // Draw the apple
-            framebuffer.draw_rectangle(
-                apple.0 * grid_size,
-                apple.1 * grid_size,
-                grid_size,
-                grid_size,
-                Color::new(129, 45, 214), // Grape color
-            );
-
-            // Draw the snake
-            snake.draw(&mut framebuffer, grid_size);
-
-            // Update the window
-            window
-                .update_with_buffer(&framebuffer.to_u32_buffer(), width, height)
-                .unwrap();
-
-            last_update = Instant::now();
+            window.update();
         }
 
-        window.update();
+        // Game over logic
+        if game_over {
+            if current_score > high_score {
+                high_score = current_score;
+                save_high_score(high_score);
+            }
+
+            while window.is_open() {
+                if window.is_key_down(Key::Escape) {
+                    return; // Exit the game
+                }
+                if window.is_key_down(Key::Enter) || window.is_key_down(Key::Space) {
+                    break; // Restart the game
+                }
+                window.update();
+            }
+
+            current_score = 0; // Reset the current score for the new game
+        }
     }
 }
 
@@ -168,6 +222,15 @@ fn draw_border_and_grid(
             framebuffer.draw_rectangle(x * grid_size, y * grid_size, grid_size, grid_size, color);
         }
     }
+}
+
+fn display_scores(framebuffer: &mut Framebuffer, current_score: u32, high_score: u32) {
+    // Placeholder function to display scores on the screen
+    // Implement the actual text drawing using your framebuffer or any text drawing method
+    println!(
+        "Current Score: {} | High Score: {}",
+        current_score, high_score
+    );
 }
 
 fn spawn_apple(snake: &Snake, width: usize, height: usize) -> (usize, usize) {
